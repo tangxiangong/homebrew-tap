@@ -31,18 +31,17 @@ brew audit --cask tangxiangong/tap/bibcitex
 
 ### Automatic updates
 
-The **Update BibCiTeX** workflow checks upstream releases hourly and can also be
-run manually from Actions. GitHub may delay scheduled runs. No cross-repository
-secret is needed: the workflow reads public upstream assets and uses this tap's
-`GITHUB_TOKEN` to commit updates to `main`.
+The upstream **Update Homebrew tap** workflow runs immediately after the
+**Release** workflow completes successfully. It checks out this tap using a
+write-enabled deploy key scoped to this repository and updates the cask. There
+is no scheduled polling. The tap's **Update BibCiTeX** workflow remains available
+for manual recovery using its own `GITHUB_TOKEN`.
 
 Only newer stable releases containing the final `release.json` publication
 marker qualify. The updater downloads both macOS `.app.zip` archives, verifies
 their sizes and SHA-256 hashes against the manifest and GitHub asset digests, and
 then updates the cask. Drafts, prereleases, incomplete releases and downgrades are
 ignored; missing or mismatched assets fail the job without changing the cask.
-The repository must allow Actions to push to `main`. GitHub may disable scheduled
-workflows after 60 days without repository activity; re-enable the workflow in
-Actions if that occurs.
+The repository must allow the deploy key and Actions to push to `main`.
 
 Run the non-UI validation tests with `ruby scripts/update-bibcitex-test.rb`.
