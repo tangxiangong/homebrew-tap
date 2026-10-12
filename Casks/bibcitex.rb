@@ -1,9 +1,9 @@
 cask "bibcitex" do
   arch arm: "arm64", intel: "x86_64"
 
-  version "0.7.3"
-  sha256 arm:   "8a3d575e0f9ce41a2f14502cdd252a8935dedd4def9fe80b9f63be50ed4e96a8",
-         intel: "f936c136c866f59cc6869590c47c8038ad1c455cf57814b150dae3133c77bcc8"
+  version "0.8.0"
+  sha256 arm:   "9e6f8984509a36c36614f3116282fbc411dd19565d6305fd7bebcf6658a095aa",
+         intel: "144c248beb49c588010e54090224b25d742778b848642be3cb975f9ea2f836c1"
 
   url "https://github.com/tangxiangong/bibcitex/releases/download/v#{version}/BibCiTeX-#{version}-macos-#{arch}.app.zip"
   name "BibCiTeX"
