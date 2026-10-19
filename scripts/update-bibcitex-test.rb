@@ -40,4 +40,55 @@ class BibcitexUpdateTest < Minitest::Test
       assert_raises(RuntimeError) { BibcitexUpdate.verify(manifest, candidate, directory) }
     end
   end
+
+  def test_validates_universal_archive_without_requiring_split_archives
+    Dir.mktmpdir do |directory|
+      candidate = release("v0.8.3")
+      name = "BibCiTeX-0.8.3-macos-universal.app.zip"
+      bytes = "universal"
+      digest = Digest::SHA256.hexdigest(bytes)
+      File.write(File.join(directory, name), bytes)
+      candidate["assets"] << { "name" => name, "digest" => "sha256:#{digest}", "size" => bytes.bytesize }
+      manifest = { "version" => "0.8.3", "channel" => "stable",
+                   "assets" => { name => { "sha256" => digest, "size" => bytes.bytesize } } }
+      assert_equal ["universal"], BibcitexUpdate.architectures(candidate)
+      assert_equal({ "universal" => digest }, BibcitexUpdate.verify(manifest, candidate, directory))
+      File.write(File.join(directory, name), "corrupted")
+      assert_raises(RuntimeError) { BibcitexUpdate.verify(manifest, candidate, directory) }
+    end
+  end
+
+  def test_partial_universal_release_does_not_fall_back_to_split_archives
+    candidate = release("v0.8.3", assets: [{ "name" => "appcast-universal.xml" }])
+    assert_equal ["universal"], BibcitexUpdate.architectures(candidate)
+    manifest = { "version" => "0.8.3", "channel" => "stable", "assets" => {} }
+    assert_raises(RuntimeError) { BibcitexUpdate.verify(manifest, candidate, "/unused") }
+  end
+
+  def test_cask_migrates_to_universal_and_accepts_later_updates
+    original = File.read(File.expand_path("../Casks/bibcitex.rb", __dir__))
+    checksum = "a" * 64
+    updated = BibcitexUpdate.update_cask(original, "0.8.3", { "universal" => checksum })
+    assert_includes updated, '  version "0.8.3"'
+    assert_includes updated, "  sha256 \"#{checksum}\""
+    assert_includes updated, '-macos-universal.app.zip"'
+    refute_includes updated, "  arch "
+    refute_includes updated, '#{arch}'
+    assert_includes updated, '  auto_updates true'
+    assert_includes updated, '  app "BibCiTeX.app"'
+    next_checksum = "b" * 64
+    later = BibcitexUpdate.update_cask(updated, "0.8.4", { "universal" => next_checksum })
+    assert_includes later, '  version "0.8.4"'
+    assert_includes later, "  sha256 \"#{next_checksum}\""
+    refute_includes later, checksum
+  end
+
+  def test_split_release_cask_updates_remain_supported
+    original = File.read(File.expand_path("../Casks/bibcitex.rb", __dir__))
+    updated = BibcitexUpdate.update_cask(original, "0.8.3", { "arm64" => "a" * 64, "x86_64" => "b" * 64 })
+    assert_includes updated, '  version "0.8.3"'
+    assert_includes updated, '  arch arm: "arm64", intel: "x86_64"'
+    assert_includes updated, '-macos-#{arch}.app.zip"'
+    assert_includes updated, "  sha256 arm:   \"#{'a' * 64}\",\n         intel: \"#{'b' * 64}\""
+  end
 end
